@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# Ansible managed
 
 source /edx/app/discovery/discovery_env
 COMMAND=$1

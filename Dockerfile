@@ -105,8 +105,6 @@ RUN ./node_modules/.bin/bower install --allow-root --production
 # every time any bit of code is changed.
 COPY . .
 COPY /configuration_files/discovery_gunicorn.py ${DISCOVERY_HOME}/discovery_gunicorn.py
-# deleted this file completely and defined the env variables in dockerfile's respective target images.
-# COPY configuration_files/discovery_env ${DISCOVERY_HOME}/discovery_env
 COPY /configuration_files/discovery-workers.sh ${DISCOVERY_HOME}/discovery-workers.sh
 COPY /configuration_files/discovery.yml ${DISCOVERY_CFG}
 COPY /scripts/discovery.sh ${DISCOVERY_HOME}/discovery.sh
