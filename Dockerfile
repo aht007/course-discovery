@@ -54,6 +54,7 @@ RUN npm install --production && ./node_modules/.bin/bower install --allow-root -
 
 # Expose canonical Discovery port
 EXPOSE 18381
+EXPOSE 8381
 
 FROM app as prod
 
@@ -89,3 +90,9 @@ RUN touch ${DISCOVERY_APP_DIR}/discovery_env
 COPY . .
 
 CMD while true; do python ./manage.py runserver 0.0.0.0:8381; sleep 2; done
+
+###########################################################
+# Define k8s target
+FROM prod as kubernetes
+ENV DISCOVERY_SETTINGS='kubernetes'
+ENV DJANGO_SETTINGS_MODULE="course_discovery.settings.$DISCOVERY_SETTINGS"
