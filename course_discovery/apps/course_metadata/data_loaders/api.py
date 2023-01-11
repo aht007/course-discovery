@@ -43,7 +43,7 @@ def _fatal_code(ex):
 class CoursesApiDataLoader(AbstractDataLoader):
     """ Loads course runs from the Courses API. """
 
-    PAGE_SIZE = 10
+    PAGE_SIZE = 50
 
     def ingest(self):
         logger.info('Refreshing Courses and CourseRuns from %s...', self.partner.courses_api_url)
@@ -79,7 +79,7 @@ class CoursesApiDataLoader(AbstractDataLoader):
         response = self._make_request(page)
         self._process_response(response)
 
-    # The courses endpoint has a 40 requests/minute rate limit.
+    # The courses endpoint has 40 requests/minute rate limit.
     # This will back off at a rate of 60/120/240 seconds (from the factor 60 and default value of base 2).
     # This backoff code can still fail because of the concurrent requests all requesting at the same time.
     # So even in the case of entering into the next minute, if we still exceed our limit for that min,
@@ -93,7 +93,7 @@ class CoursesApiDataLoader(AbstractDataLoader):
     )
     def _make_request(self, page):
         logger.info('Requesting course run page %d...', page)
-        params = {'page': page, 'page_size': self.PAGE_SIZE, 'username': self.username}
+        params = {'page': page, 'page_size': self.PAGE_SIZE, 'username': self.username, 'active_only': True}
         response = self.api_client.get(self.api_url + '/courses/', params=params)
         response.raise_for_status()
         return response.json()
@@ -108,6 +108,7 @@ class CoursesApiDataLoader(AbstractDataLoader):
     def process_single_course_run(self, body):
         course_run_id = body['id']
 
+        logger.info(f"Starting course processing for id {course_run_id}")
         try:
             body = self.clean_strings(body)
             official_run, draft_run = self.get_course_run(body)
@@ -123,6 +124,8 @@ class CoursesApiDataLoader(AbstractDataLoader):
                 course, created = self.get_or_create_course(body)
                 course_run = self.create_course_run(course, body)
                 if created:
+                    logger.info(f"Course created with uuid {course.uuid} and key {course.key}")
+                    logger.info(f"Course run created with uuid {course_run.uuid} and key {course_run.key}")
                     course.canonical_course_run = course_run
                     course.save()
         except Exception:  # pylint: disable=broad-except
@@ -166,7 +169,7 @@ class CoursesApiDataLoader(AbstractDataLoader):
             if not has_upgrade_deadline_override and official_run:
                 push_to_ecommerce_for_course_run(official_run)
 
-        logger.info('Processed course run with UUID [%s].', run.uuid)
+        logger.info(f'Processed course run with UUID [{run.uuid}] and key [{run.key}].')
 
     def create_course_run(self, course, body):
         defaults = self.format_course_run_data(body, course=course)

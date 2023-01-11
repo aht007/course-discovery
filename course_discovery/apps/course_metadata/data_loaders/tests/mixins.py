@@ -217,6 +217,19 @@ class GeotargetingCSVLoaderMixin:
         return csv
 
 
+class GeolocationCSVLoaderMixin(GeotargetingCSVLoaderMixin):
+    """
+    Mixin to contain various variables and methods used for GeolocationCSVDataLoader testing.
+    """
+    CSV_DATA_KEYS_ORDER = [
+        'UUID',
+        'PRODUCT TYPE',
+        'LOCATION NAME',
+        'LATITUDE',
+        'LONGTITUDE',
+    ]
+
+
 class CSVLoaderMixin:
     """
     Mixin to contain various variables and methods used for CSVDataLoader testing.
@@ -277,6 +290,7 @@ class CSVLoaderMixin:
         },
         'facts_data': ['90 million', '<p>Bacterias cottage cost</p>', 'Diamond mine', '<p>Worth it</p>'],
         'start_date': '2020-01-25T00:00:00+00:00',
+        'end_date': '2020-02-25T00:00:00+00:00',
         'registration_deadline': '2020-01-25T00:00:00+00:00',
         'variant_id': "00000000-0000-0000-0000-000000000000",
         "meta_title": "SEO Title",
@@ -422,6 +436,7 @@ class CSVLoaderMixin:
         assert course.additional_metadata.lead_capture_form_url == expected_data['lead_capture_form_url']
         assert course.additional_metadata.organic_url == expected_data['organic_url']
         assert course.additional_metadata.start_date.isoformat() == expected_data['start_date']
+        assert course.additional_metadata.end_date.isoformat() == expected_data['end_date']
         assert course.additional_metadata.product_meta.title == expected_data['meta_title']
         assert course.additional_metadata.product_meta.description == expected_data['meta_description']
         assert set(

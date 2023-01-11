@@ -727,6 +727,10 @@ class AdditionalMetadata(TimeStampedModel):
         default=None, blank=True, null=True,
         help_text=_('The start date of the external course offering for marketing purpose')
     )
+    end_date = models.DateTimeField(
+        default=None, blank=True, null=True,
+        help_text=_('The ends date of the external course offering for marketing purpose')
+    )
     registration_deadline = models.DateTimeField(
         default=None, blank=True, null=True,
         help_text=_('The suggested deadline for enrollment for marketing purpose')
@@ -893,28 +897,18 @@ class PkSearchableMixin:
             # want everything, we don't need to actually query elasticsearch at all.
             return queryset
 
+        logger.info(f"Attempting Elasticsearch document search against query: {query}")
         es_document, *_ = registry.get_documents(models=(cls,))
         dsl_query = ESDSLQ('query_string', query=query, analyze_wildcard=True)
         try:
             results = es_document.search().query(dsl_query).execute()
-
-            # to be removed after testing
-            logger.info(f'dsl_query generated from query "{query}": {dsl_query}')
-            logger.info(f'Elasticsearch data extracted from query "{query}": {results}')
-
         except RequestError as exp:
             logger.warning('Elasticsearch request is failed. Got exception: %r', exp)
             results = []
         ids = {result.pk for result in results}
-        org_and_ids = {(result.pk, result.org) for result in results if hasattr(result, 'org')}
-
-        # to be removed after testing
-        logger.info(f'Elasticsearch data ids: {ids}')
-        logger.info(f'Elasticsearch data ids count is: {len(ids)}')
-        logger.info(f'Elasticsearch data ids and orgs from query "{query}": {org_and_ids}')
+        logger.info(f'{len(ids)} records extracted from Elasticsearch query "{query}"')
         filtered_queryset = queryset.filter(pk__in=ids)
-        logger.info(f'Queryset extracted from Elasticsearch ids from query "{query}": {filtered_queryset}')
-
+        logger.info(f'Filtered queryset of length {len(filtered_queryset)} extracted against query "{query}"')
         return filtered_queryset
 
 
@@ -975,6 +969,12 @@ class GeoLocation(TimeStampedModel):
     LAT_MAX_DIGITS = 9
     LNG_MAX_DIGITS = 10
 
+    location_name = models.CharField(
+        max_length=128,
+        blank=False,
+        null=True,
+    )
+
     lat = models.DecimalField(
         max_digits=LAT_MAX_DIGITS,
         decimal_places=DECIMAL_PLACES,
@@ -992,7 +992,7 @@ class GeoLocation(TimeStampedModel):
         unique_together = (('lat', 'lng'),)
 
     def __str__(self):
-        return f'{self.lat}, {self.lng}'
+        return f'{self.location_name}'
 
     @property
     def coordinates(self):
@@ -3523,6 +3523,19 @@ class CourseUrlRedirect(AbstractValueModel):
 class GeotargetingDataLoaderConfiguration(ConfigurationModel):
     """
     Configuration to store a csv file that will be used in import_geotargeting_data.
+    """
+    # Timeout set to 0 so that the model does not read from cached config in case the config entry is deleted.
+    cache_timeout = 0
+    csv_file = models.FileField(
+        validators=[FileExtensionValidator(allowed_extensions=['csv'])],
+        help_text=_("It expects the data will be provided in a csv file format "
+                    "with first row containing all the headers.")
+    )
+
+
+class GeolocationDataLoaderConfiguration(ConfigurationModel):
+    """
+    Configuration to store a csv file that will be used in import_geolocation_data.
     """
     # Timeout set to 0 so that the model does not read from cached config in case the config entry is deleted.
     cache_timeout = 0
