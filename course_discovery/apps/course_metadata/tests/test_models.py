@@ -34,7 +34,7 @@ from course_discovery.apps.course_metadata.models import (
     FAQ, AbstractHeadingBlurbModel, AbstractMediaModel, AbstractNamedModel, AbstractTitleDescriptionModel,
     AbstractValueModel, CorporateEndorsement, Course, CourseEditor, CourseRun, CourseRunType, CourseType, Curriculum,
     CurriculumCourseMembership, CurriculumCourseRunExclusion, CurriculumProgramMembership, DegreeCost, DegreeDeadline,
-    Endorsement, Organization, OrganizationMapping, Program, ProgramType, Ranking, Seat, SeatType, Subject, Topic
+    Endorsement, Organization, Program, ProgramType, Ranking, Seat, SeatType, Subject, Topic
 )
 from course_discovery.apps.course_metadata.publishers import (
     CourseRunMarketingSitePublisher, ProgramMarketingSitePublisher
@@ -42,7 +42,7 @@ from course_discovery.apps.course_metadata.publishers import (
 from course_discovery.apps.course_metadata.tests import factories
 from course_discovery.apps.course_metadata.tests.factories import (
     AdditionalMetadataFactory, CourseFactory, CourseRunFactory, ImageFactory, ProgramFactory, SeatFactory,
-    SeatTypeFactory, SourceFactory
+    SeatTypeFactory
 )
 from course_discovery.apps.course_metadata.tests.mixins import MarketingSitePublisherTestMixin
 from course_discovery.apps.course_metadata.utils import ensure_draft_world
@@ -220,10 +220,6 @@ class TestCourse(TestCase):
         self.assertEqual(course.additional_metadata.start_date, additional_metadata.start_date)
         self.assertEqual(course.additional_metadata.registration_deadline, additional_metadata.registration_deadline)
         self.assertEqual(course.additional_metadata.product_meta, additional_metadata.product_meta)
-        self.assertEqual(course.additional_metadata.product_status, additional_metadata.product_status)
-        self.assertEqual(course.additional_metadata.external_course_marketing_type,
-                         additional_metadata.external_course_marketing_type)
-        assert course.additional_metadata.end_date == additional_metadata.end_date
         assert course.additional_metadata.product_status == ExternalProductStatus.Published
 
     def test_enterprise_subscription_inclusion(self):
@@ -1382,42 +1378,6 @@ class OrganizationTests(TestCase):
         assert program.enterprise_subscription_inclusion is False
 
 
-class OrganizationMappingTests(TestCase):
-    """ Tests for the OrganizationMapping model. """
-
-    def setUp(self):
-        super().setUp()
-        self.test_external_org_code = 'test_org'
-        self.test_source = SourceFactory()
-        self.org = factories.OrganizationFactory()
-        self.org_mapping = factories.OrganizationMappingFactory(
-            organization=self.org,
-            organization_external_key=self.test_external_org_code,
-            source=self.test_source
-        )
-
-    def test_str(self):
-        """ Verify the string representation of the model. """
-        expected = f'{self.org_mapping.source.name} - {self.org_mapping.organization_external_key} -> {self.org_mapping.organization.name}'  # pylint: disable=line-too-long
-        assert str(self.org_mapping) == expected
-
-    def test_get_organziation_from_org_mapping(self):
-        """ Verify the method returns the organization for the given external organization code and source. """
-        assert OrganizationMapping.objects.get(
-            source=self.test_source, organization_external_key=self.test_external_org_code
-        ).organization == self.org
-
-    def test_unique_together_constraint_for_org_mapping(self):
-        """ Verify the unique_together constraint for the model. """
-        test_org = factories.OrganizationFactory()
-        with pytest.raises(IntegrityError):
-            factories.OrganizationMappingFactory(
-                organization=test_org,
-                organization_external_key=self.test_external_org_code,
-                source=self.test_source
-            )
-
-
 @ddt.ddt
 class PersonTests(TestCase):
     """ Tests for the `Person` model. """
@@ -2187,7 +2147,7 @@ class ProgramTests(TestCase):
                 type=verified_seat_type,
                 currency=currency,
                 course_run=course_run,
-                price=day_separation * 100)
+                price=(day_separation * 100))
             day_separation += 1
         course.canonical_course_run = course_runs_same_course[2]
         course.save()
@@ -2465,6 +2425,26 @@ class ProgramTests(TestCase):
         """ Verify the property returns None if the Program has no program_duration_override set. """
         self.program.program_duration_override = ''
         assert self.program.program_duration_override is not None
+
+class ProgramSubscriptionTests(TestCase):
+
+    def test_str(self):
+        program = factories.ProgramSubscriptionFactory()
+        expected_output = f"{program.program_id} subscription (not eligible)"
+        self.assertEqual(str(program), expected_output)
+
+    def test_subscription_eligible_default(self):
+        subscription = factories.ProgramSubscriptionFactory()
+        self.assertFalse(subscription.subscription_eligible)
+
+
+class ProgramSubscriptionPriceTests(TestCase):
+
+    def test_str(self):
+        program_subscription_price = factories.ProgramSubscriptionPriceFactory()
+        expected_output = "0.0 USD"
+        self.assertEqual(str(program_subscription_price.price), expected_output)
+
 
 
 class PathwayTests(TestCase):

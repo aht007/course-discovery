@@ -9,7 +9,6 @@ from taxonomy.models import CourseSkills, ProgramSkill, Skill
 
 from course_discovery.apps.core.tests.factories import PartnerFactory, UserFactory, add_m2m_data
 from course_discovery.apps.core.tests.utils import FuzzyURL
-from course_discovery.apps.course_metadata.choices import ExternalCourseMarketingType, ExternalProductStatus
 from course_discovery.apps.course_metadata.models import *  # pylint: disable=wildcard-import
 from course_discovery.apps.ietf_language_tags.models import LanguageTag
 
@@ -31,14 +30,6 @@ class AbstractTitleDescriptionFactory(factory.django.DjangoModelFactory):
 class AbstractHeadingBlurbModelFactory(factory.django.DjangoModelFactory):
     heading = FuzzyText(length=255)
     blurb = FuzzyText()
-
-
-class SourceFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Source
-
-    name = FuzzyText()
-    description = FuzzyText()
 
 
 class ImageFactory(AbstractMediaModelFactory):
@@ -113,13 +104,10 @@ class AdditionalMetadataFactory(factory.django.DjangoModelFactory):
     organic_url = FuzzyURL()
     certificate_info = factory.SubFactory(CertificateInfoFactory)
     start_date = FuzzyDateTime(datetime.datetime(2014, 1, 1, tzinfo=UTC), force_microsecond=0)
-    end_date = FuzzyDateTime(datetime.datetime(2015, 1, 1, tzinfo=UTC), force_microsecond=0)
     registration_deadline = FuzzyDateTime(datetime.datetime(2014, 1, 1, tzinfo=UTC), force_microsecond=0)
     variant_id = factory.LazyFunction(uuid4)
     course_term_override = FuzzyText()
     product_meta = factory.SubFactory(ProductMetaFactory, keywords=['test', 'test2'])
-    product_status = ExternalProductStatus.Published
-    external_course_marketing_type = FuzzyChoice([name for name, __ in ExternalCourseMarketingType.choices])
 
     @factory.post_generation
     def facts(self, create, extracted, **kwargs):
@@ -370,7 +358,6 @@ class CourseFactory(SalesforceRecordFactory):
     organization_short_code_override = FuzzyText()
     canonical_course_run = None
     extra_description = factory.SubFactory(AdditionalPromoAreaFactory)
-    product_source = factory.SubFactory(SourceFactory)
     additional_metadata = factory.SubFactory(AdditionalMetadataFactory)
     additional_information = FuzzyText()
     faq = FuzzyText()
@@ -534,15 +521,6 @@ class OrganizationFactory(SalesforceRecordFactory):
         model = Organization
 
 
-class OrganizationMappingFactory(factory.django.DjangoModelFactory):
-    organization = factory.SubFactory(OrganizationFactory)
-    source = factory.SubFactory(SourceFactory)
-    organization_external_key = FuzzyText()
-
-    class Meta:
-        model = OrganizationMapping
-
-
 @factory.django.mute_signals(post_save)
 class OrganizationFactoryNoSignals(OrganizationFactory):
     pass
@@ -665,7 +643,6 @@ class ProgramBaseFactory(factory.django.DjangoModelFactory):
     organization_short_code_override = FuzzyText()
     organization_logo_override = FuzzyText(suffix=".png")
     primary_subject_override = factory.SubFactory(SubjectFactory)
-    product_source = factory.SubFactory(SourceFactory)
     level_type_override = factory.SubFactory(LevelTypeFactory)
     language_override = factory.Iterator(LanguageTag.objects.all())
     taxi_form = factory.SubFactory(TaxiFormFactory)
@@ -735,6 +712,19 @@ class ProgramBaseFactory(factory.django.DjangoModelFactory):
 class ProgramFactory(ProgramBaseFactory):
     status = ProgramStatus.Active
 
+class ProgramSubscriptionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ProgramSubscription
+
+    program_id = factory.SubFactory(ProgramFactory)
+
+
+class ProgramSubscriptionPriceFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = ProgramSubscriptionPrice
+
+    program_subscription = factory.SubFactory(ProgramSubscriptionFactory)
+
 
 class SpecializationFactory(factory.django.DjangoModelFactory):
     class Meta:
@@ -760,7 +750,6 @@ class DegreeFactory(ProgramFactory):
     search_card_cost = FuzzyText()
     search_card_courses = FuzzyText()
     banner_border_color = FuzzyText(length=6)
-    display_on_org_page = False
 
     @factory.post_generation
     def rankings(self, create, extracted, **kwargs):
@@ -899,19 +888,9 @@ class DrupalPublishUuidConfigFactory(factory.django.DjangoModelFactory):
         model = DrupalPublishUuidConfig
 
 
-class BulkUploadTagsConfigFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = BulkUploadTagsConfig
-
-
 class GeotargetingDataLoaderConfigurationFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = GeotargetingDataLoaderConfiguration
-
-
-class GeolocationDataLoaderConfigurationFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = GeolocationDataLoaderConfiguration
 
 
 class CSVDataLoaderConfigurationFactory(factory.django.DjangoModelFactory):
